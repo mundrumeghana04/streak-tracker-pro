@@ -16,7 +16,7 @@ function today() {
  return new Date().toDateString();
 }
 
-// DOM refs (clean + safe)
+// DOM refs
 const titleEl = document.getElementById('title');
 const categoryEl = document.getElementById("category");
 const priorityEl = document.getElementById("priority");
@@ -87,7 +87,7 @@ if (localStorage.getItem('theme') === 'dark') {
 }
 updateThemeButton();
 
-// ================= GOAL TYPE UI =================
+// ================= GOAL TYPE =================
 goalTypeEl.addEventListener("change", () => {
  targetDaysEl.style.display =
  goalTypeEl.value === "target" ? "block" : "none";
@@ -105,7 +105,6 @@ function complete(id) {
     return alert("Already completed today");
  }
 
- // FIXED streak logic (safe + correct)
  if (!t.lastCompleted) {
     t.currentStreak = 1;
  } else {
@@ -113,11 +112,7 @@ function complete(id) {
     const now = new Date(tday);
     const diff = Math.floor((now - last) / 86400000);
 
-    if (diff === 1) {
-        t.currentStreak += 1;
-    } else {
-        t.currentStreak = 1;
-    }
+    t.currentStreak = (diff === 1) ? t.currentStreak + 1 : 1;
  }
 
  t.bestStreak = Math.max(t.bestStreak, t.currentStreak);
@@ -166,9 +161,11 @@ function render() {
 
  filtered.forEach(t => {
 
-  let progress = (t.goalType === 'target' && t.targetDays > 0)
-   ? Math.min(100, (t.currentStreak / t.targetDays) * 100)
-   : 100;
+  let progressValue = null;
+
+  if (t.goalType === 'target' && t.targetDays > 0) {
+    progressValue = Math.min(100, (t.currentStreak / t.targetDays) * 100);
+  }
 
   if (t.lastCompleted === today()) done++;
   longest = Math.max(longest, t.bestStreak);
@@ -192,10 +189,14 @@ function render() {
     <p>✅ Total: ${t.totalCompleted}</p>
 
     <div class="progress">
-      <div class="bar" style="width:${progress}%"></div>
+      <div class="bar" style="width:${progressValue ?? 100}%"></div>
     </div>
 
-    <p>Progress: ${progress.toFixed(0)}%</p>
+    ${progressValue !== null ? `
+      <p>Progress: ${progressValue.toFixed(0)}%</p>
+    ` : `
+      <p>♾ Unlimited Goal (No fixed target)</p>
+    `}
 
     ${t.goalType === "target"
       ? `<p>🎯 Remaining: ${Math.max(0, t.targetDays - t.currentStreak)} days</p>`

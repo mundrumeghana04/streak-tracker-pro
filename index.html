@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="description" content="Track daily habits, goals and streaks with Streak Tracker Pro">
+
+<title>Streak Tracker Pro</title>
+
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- ================= HEADER ================= -->
+    <header>
+        <div>
+            <h1>🔥 Streak Tracker Pro</h1>
+            <p class="subtitle">Build consistency one day at a time</p>
+        </div>
+
+        <button id="themeBtn">🌙 Dark Mode</button>
+    </header>
+
+    <!-- ================= SEARCH ================= -->
+    <section class="search-section">
+        <input id="searchTask" placeholder="🔍 Search goals, categories..." />
+    </section>
+
+    <!-- ================= DASHBOARD ================= -->
+    <section class="dashboard">
+        <div class="card">
+            <h3>Total Tasks</h3>
+            <p id="totalTasks">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Completed Today</h3>
+            <p id="completedToday">0</p>
+        </div>
+
+        <div class="card">
+            <h3>Longest Streak</h3>
+            <p id="longestStreak">0</p>
+        </div>
+    </section>
+
+    <!-- ================= ADD SECTION ================= -->
+    <section class="add-section">
+
+        <h2>Add New Goal</h2>
+
+        <div class="add">
+
+            <input id="title" placeholder="Task Name" />
+
+            <select id="category">
+                <option value="">Select Category</option>
+                <option>Study</option>
+                <option>Fitness</option>
+                <option>Health</option>
+                <option>Reading</option>
+                <option>Coding</option>
+                <option>Meditation</option>
+                <option>Work</option>
+                <option>Personal Development</option>
+                <option>Finance</option>
+                <option>Hobby</option>
+                <option>Language Learning</option>
+                <option>Other</option>
+            </select>
+
+            <select id="priority">
+                <option value="">Select Priority</option>
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+            </select>
+
+            <select id="goalType">
+                <option value="target">🎯 Target Goal</option>
+                <option value="unlimited">♾ Unlimited Goal</option>
+            </select>
+
+            <input
+                id="targetDays"
+                type="number"
+                min="1"
+                placeholder="Target Days"
+            />
+
+            <button id="addBtn">Add Task</button>
+
+        </div>
+
+    </section>
+
+    <!-- ================= BACKUP ================= -->
+    <section class="backup-section">
+
+        <h2>Backup & Restore</h2>
+
+        <button id="exportBtn">📤 Export Backup</button>
+
+        <input type="file" id="importFile" accept=".json" />
+
+    </section>
+
+    <!-- ================= TASKS ================= -->
+    <section class="tasks-section">
+
+        <h2>Your Goals</h2>
+
+        <div id="tasks"></div>
+
+        <div id="emptyState">
+            <h3>No Goals Yet</h3>
+            <p>Add your first goal and start building your streak.</p>
+        </div>
+
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+        <p>© 2026 Built with ❤️ by Mundru Meghana</p>
+    </footer>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>

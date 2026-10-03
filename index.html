@@ -4,11 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta name="description" content="Track daily habits, goals and streaks with Streak Tracker Pro">
+<meta name="description" content="Track daily habits, goals and streaks with Streak Tracker Pro - featuring real scheduled background push reminders">
+<meta name="theme-color" content="#6366f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreakTracker">
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 
 <title>Streak Tracker Pro</title>
 
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="css/style.css">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -23,8 +31,15 @@
             <p class="subtitle">Build consistency one day at a time</p>
         </div>
 
-        <button id="themeBtn">🌙 Dark Mode</button>
+        <div class="header-actions">
+            <button id="notifStatusBtn" class="notif-btn" title="Toggle background reminders">🔔 Enable Notifications</button>
+            <button id="testPushBtn" class="test-push-btn" title="Send a test notification to verify delivery">🧪 Test Push</button>
+            <button id="themeBtn">🌙 Dark Mode</button>
+        </div>
     </header>
+
+    <!-- ================= NOTIFICATION BANNER ================= -->
+    <div id="notifBanner" class="notif-banner" style="display: none;"></div>
 
     <!-- ================= SEARCH ================= -->
     <section class="search-section">
@@ -56,7 +71,7 @@
 
         <div class="add">
 
-            <input id="title" placeholder="Task Name" />
+            <input id="title" placeholder="Task Name (e.g. Study DSA)" />
 
             <select id="category">
                 <option value="">Select Category</option>
@@ -90,8 +105,22 @@
                 id="targetDays"
                 type="number"
                 min="1"
-                placeholder="Target Days"
+                placeholder="Target Days (e.g. 30)"
             />
+
+            <!-- Reminder settings in Add form -->
+            <div class="reminder-form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="enableReminder">
+                    <span>🔔 Enable Daily Reminder</span>
+                </label>
+
+                <div id="reminderTimeGroup" class="reminder-time-group" style="display: none;">
+                    <label for="reminderTime">Time:</label>
+                    <input type="time" id="reminderTime" value="19:00" />
+                    <span id="detectedTz" class="tz-tag"></span>
+                </div>
+            </div>
 
             <button id="addBtn">Add Task</button>
 
@@ -104,9 +133,11 @@
 
         <h2>Backup & Restore</h2>
 
-        <button id="exportBtn">📤 Export Backup</button>
-
-        <input type="file" id="importFile" accept=".json" />
+        <div class="backup-actions">
+            <button id="exportBtn">📤 Export Backup</button>
+            <label for="importFile" class="file-label">📥 Import Backup</label>
+            <input type="file" id="importFile" accept=".json" style="display: none;" />
+        </div>
 
     </section>
 
@@ -126,12 +157,12 @@
 
     <!-- ================= FOOTER ================= -->
     <footer>
-        <p>© 2026 Built with ❤️ by Mundru Meghana</p>
+        <p>© 2026 Built with ❤️ by Mundru Meghana • PWA & Background Push Enabled</p>
     </footer>
 
 </div>
 
-<script src="script.js"></script>
+<script src="js/script.js"></script>
 
 </body>
 </html>

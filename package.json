@@ -1,0 +1,21 @@
+{
+  "name": "streak-tracker-pro",
+  "version": "1.1.0",
+  "description": "Streak Tracker Pro - Habit and goal tracking with real background scheduled push notifications",
+  "scripts": {
+    "start": "node scripts/dev-server.js",
+    "generate-vapid": "node scripts/generate-vapid.js",
+    "test-push": "node scripts/test-push.js",
+    "check-reminders": "node scripts/check-reminders-local.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.4.7",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "serve": "^14.2.4"
+  },
+  "author": "Mundru Meghana",
+  "license": "MIT"
+}

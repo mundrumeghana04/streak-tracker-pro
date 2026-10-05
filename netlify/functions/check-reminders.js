@@ -41,18 +41,25 @@ function getDynamicNotificationContent(title, category, streak) {
 
   return { heading, body };
 }
-
 async function runCheckReminders() {
-  const webpush = initWebPush();
-  const supabase = getSupabaseClient();
+  console.log('[DEBUG] check-reminders started');
 
-  // 1. Fetch all active reminders
+  const webpush = initWebPush();
+  console.log('[DEBUG] VAPID initialized');
+
+  const supabase = getSupabaseClient();
+  console.log('[DEBUG] Supabase initialized');
+
   const { data: reminders, error } = await supabase
     .from('streak_reminders')
     .select('*')
     .eq('reminder_enabled', true);
 
+  console.log('[DEBUG] Supabase query completed');
+  console.log('[DEBUG] Reminder count:', reminders?.length || 0);
+
   if (error) {
+    console.error('[DEBUG] Supabase query error:', error);
     throw new Error(`Failed to query reminders: ${error.message}`);
   }
 
@@ -70,50 +77,90 @@ async function runCheckReminders() {
   const now = new Date();
 
   for (const reminder of (reminders || [])) {
+    console.log('[DEBUG] Checking reminder:', {
+      id: reminder.id,
+      title: reminder.title,
+      reminder_time: reminder.reminder_time,
+      timezone: reminder.timezone,
+      last_completed: reminder.last_completed,
+      last_reminder_sent: reminder.last_reminder_sent
+    });
+
     const tz = reminder.timezone || 'Asia/Kolkata';
     const todayLocal = getLocalDateString(tz, now);
     const timeLocal = getLocalTimeString(tz, now);
 
-    // Condition 1: Check if already completed today
+    console.log('[DEBUG] Current local time:', {
+      timezone: tz,
+      today: todayLocal,
+      currentTime: timeLocal,
+      scheduledTime: reminder.reminder_time
+    });
+
+    // 1. Skip if the task was already completed today
     if (reminder.last_completed === todayLocal) {
+      console.log(
+        `[DEBUG] SKIP - "${reminder.title}" already completed today`
+      );
       results.skippedCompleted++;
       continue;
     }
 
-    // Condition 2: For target goals, check if goal is already completed
+    // 2. Skip if target goal has already been completed
     if (
       reminder.goal_type === 'target' &&
       reminder.target_days > 0 &&
       reminder.current_streak >= reminder.target_days
     ) {
+      console.log(
+        `[DEBUG] SKIP - "${reminder.title}" target already completed`
+      );
       results.skippedTargetCompleted++;
       continue;
     }
 
-    // Condition 3: Check if already sent today (at most once per day)
+    // 3. Skip if reminder was already sent today
     if (reminder.last_reminder_sent === todayLocal) {
+      console.log(
+        `[DEBUG] SKIP - "${reminder.title}" reminder already sent today`
+      );
       results.skippedAlreadySent++;
       continue;
     }
 
-    // Condition 4: Check if scheduled time has arrived
-    const [remHour, remMin] = (reminder.reminder_time || '19:00').split(':').map(Number);
-    const [curHour, curMin] = timeLocal.split(':').map(Number);
+    // 4. Check scheduled time
+    const [remHour, remMin] = (reminder.reminder_time || '19:00')
+      .split(':')
+      .map(Number);
+
+    const [curHour, curMin] = timeLocal
+      .split(':')
+      .map(Number);
 
     const reminderMinutes = remHour * 60 + remMin;
     const currentMinutes = curHour * 60 + curMin;
 
-    // Trigger if current time has reached reminder time, within a 120-minute window
-    // (allows hourly cron or slight network/server execution jitter)
     const minutesDiff = currentMinutes - reminderMinutes;
-    const isTimeToRemind = minutesDiff >= 0 && minutesDiff <= 120;
+
+    console.log('[DEBUG] Time calculation:', {
+      scheduledMinutes: reminderMinutes,
+      currentMinutes,
+      minutesDiff
+    });
+
+    // Allow a 120-minute window after scheduled time
+    const isTimeToRemind =
+      minutesDiff >= 0 && minutesDiff <= 120;
 
     if (!isTimeToRemind) {
+      console.log(
+        `[DEBUG] SKIP - "${reminder.title}" reminder time has not arrived`
+      );
       results.skippedNotTimeYet++;
       continue;
     }
 
-    // Format personalized dynamic push payload
+    // 5. Create personalized notification
     const { heading, body } = getDynamicNotificationContent(
       reminder.title,
       reminder.category,
@@ -134,10 +181,21 @@ async function runCheckReminders() {
     });
 
     try {
-      await webpush.sendNotification(reminder.subscription, pushPayload);
+      console.log(
+        `[DEBUG] ATTEMPTING PUSH for "${reminder.title}"`
+      );
 
-      // Record that reminder was successfully sent today
-      await supabase
+      await webpush.sendNotification(
+        reminder.subscription,
+        pushPayload
+      );
+
+      console.log(
+        `[DEBUG] PUSH SENT SUCCESSFULLY for "${reminder.title}"`
+      );
+
+      // Record successful send
+      const { error: updateError } = await supabase
         .from('streak_reminders')
         .update({
           last_reminder_sent: todayLocal,
@@ -145,29 +203,52 @@ async function runCheckReminders() {
         })
         .eq('id', reminder.id);
 
+      if (updateError) {
+        console.error(
+          '[DEBUG] Failed to update last_reminder_sent:',
+          updateError
+        );
+      } else {
+        console.log(
+          `[DEBUG] last_reminder_sent updated for "${reminder.title}"`
+        );
+      }
+
       results.sent++;
-      console.log(`[check-reminders] Successfully sent reminder to task ${reminder.task_id} ("${reminder.title}")`);
 
     } catch (pushErr) {
-      console.error(`[check-reminders] Push failed for task ${reminder.task_id}:`, pushErr.message);
+      console.error(
+        `[DEBUG] PUSH FAILED for "${reminder.title}":`,
+        pushErr
+      );
 
-      // HTTP 404 or 410 means subscription expired or user uninstalled / revoked permission
-      if (pushErr.statusCode === 404 || pushErr.statusCode === 410) {
-        console.log(`[check-reminders] Removing expired subscription for task ${reminder.task_id}`);
+      // Expired subscription
+      if (
+        pushErr.statusCode === 404 ||
+        pushErr.statusCode === 410
+      ) {
+        console.log(
+          `[DEBUG] Removing expired subscription for "${reminder.title}"`
+        );
+
         await supabase
           .from('streak_reminders')
           .delete()
           .eq('id', reminder.id);
+
         results.expiredSubscriptionsRemoved++;
       } else {
         results.errors.push({
           taskId: reminder.task_id,
+          title: reminder.title,
           error: pushErr.message,
           statusCode: pushErr.statusCode
         });
       }
     }
   }
+
+  console.log('[DEBUG] FINAL RESULTS:', results);
 
   return results;
 }

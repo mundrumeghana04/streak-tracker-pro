@@ -71,20 +71,30 @@ self.addEventListener('fetch', (event) => {
           if (
             networkResponse &&
             networkResponse.status === 200 &&
-            (requestUrl.origin === location.origin || requestUrl.hostname.includes('fonts.gstatic.com'))
+            (requestUrl.origin === location.origin ||
+              requestUrl.hostname.includes('fonts.gstatic.com'))
           ) {
             const responseToCache = networkResponse.clone();
+
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
             });
           }
+
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request is HTML navigation, fallback to root cached index.html
+          // If offline and this is a page navigation,
+          // return the cached app shell.
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html') || caches.match('/');
+            return caches.match('/index.html').then((response) => {
+              return response || caches.match('/');
+            });
           }
+
+          // IMPORTANT:
+          // Never return undefined from respondWith().
+          return cachedResponse || Response.error();
         });
 
       return cachedResponse || fetchPromise;

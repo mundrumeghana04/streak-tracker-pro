@@ -1,14 +1,14 @@
 {
-  "name": "Streak Tracker Pro",
-  "short_name": "StreakTracker",
+  "name": "StreakUp",
+  "short_name": "StreakUp",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0f172a",
-  "theme_color": "#6366f1",
-  "description": "Track daily habits, goals and streaks with real background scheduled push notifications",
+  "theme_color": "#4f46e5",
+  "description": "Build consistency. Level up every day with StreakUp habit tracking and smart background reminders.",
   "icons": [
     {
       "src": "/assets/icons/icon-192.png",

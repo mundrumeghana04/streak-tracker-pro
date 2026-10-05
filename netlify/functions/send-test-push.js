@@ -21,7 +21,7 @@ exports.handler = async (event, context) => {
     const webpush = initWebPush();
 
     const payload = JSON.stringify({
-      title: title || '🔥 Streak Tracker Pro: Test Alert!',
+      title: title || '🔥 StreakUp: Test Alert!',
       body: message || 'Web Push notifications are working perfectly on this device!',
       icon: '/assets/icons/icon-192.png',
       badge: '/assets/icons/badge-72.png',

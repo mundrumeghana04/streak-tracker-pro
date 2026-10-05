@@ -5,9 +5,10 @@
 [functions]
   node_bundler = "esbuild"
 
-# Scheduled function runs on Netlify to evaluate reminders
+# Scheduled function runs on Netlify every 5 minutes to evaluate both streak habits and one-time reminders
 [functions."check-reminders"]
   schedule = "*/5 * * * *"
+
 
 # PWA and Service Worker header configurations
 [[headers]]

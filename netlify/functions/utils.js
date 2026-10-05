@@ -97,6 +97,18 @@ function getLocalTimeString(timezone = 'Asia/Kolkata', dateObj = new Date()) {
   }
 }
 
+// Get YYYY-MM-DD (ISO date) in a specific timezone
+function getLocalDateIsoString(timezone = 'Asia/Kolkata', dateObj = new Date()) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(dateObj);
+  } catch (e) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+}
+
 module.exports = {
   CORS_HEADERS,
   getCorsResponse,
@@ -104,5 +116,7 @@ module.exports = {
   getSupabaseClient,
   generateEndpointHash,
   getLocalDateString,
-  getLocalTimeString
+  getLocalTimeString,
+  getLocalDateIsoString
 };
+

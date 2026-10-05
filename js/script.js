@@ -1,4 +1,4 @@
-// Streak Tracker Pro - Version 1.1.0
+// StreakUp - Version 1.2.0
 // Features: Habit tracking, Target & Unlimited goals, Streaks, Notes, Dark/Light Mode,
 // Search, Backup/Restore, Offline PWA & Scheduled Background Push Notifications
 
@@ -12,7 +12,8 @@ const USER_TIMEZONE = (() => {
 })();
 
 // Default fallback VAPID key (matches generated backend key)
-const FALLBACK_VAPID_PUBLIC_KEY = 'BBiD1WwJ1WVDls6dvafwEnIpJHvNYetQ8VLbm06yWLYwnscdiWKRC9w9kkZGFTAwwvVMxVSgrM6NhhpzpDNgm-k';
+const FALLBACK_VAPID_PUBLIC_KEY = 'BN72HLtQfYH-gyzLSJURTEBhbfNlm6gd5mQGsGJQ171LBbj4jXY3wMT30Yn7UQl4_Jyv7IaodoulkFA3jreNBgM';
+
 let swRegistration = null;
 let currentPushSubscription = null;
 
@@ -30,9 +31,9 @@ function normalizeTask(t) {
     totalCompleted: Number(t.totalCompleted) || 0,
     lastCompleted: t.lastCompleted || null,
     notes: Array.isArray(t.notes) ? t.notes : [],
-    // New reminder fields with safe defaults
+    // Reminder fields with safe defaults
     notificationEnabled: Boolean(t.notificationEnabled),
-    reminderTime: t.reminderTime || "19:00",
+    reminderTime: t.reminderTime || "19:30",
     timezone: t.timezone || USER_TIMEZONE,
     lastReminderSent: t.lastReminderSent || null
   };
@@ -65,7 +66,7 @@ function getLevel(streak) {
 }
 
 function formatTime12H(time24) {
-  if (!time24) return "7:00 PM";
+  if (!time24) return "7:30 PM";
   const [hStr, mStr] = time24.split(":");
   let h = parseInt(hStr, 10);
   const m = mStr || "00";
@@ -105,13 +106,14 @@ const themeBtn = document.getElementById("themeBtn");
 const notifStatusBtn = document.getElementById("notifStatusBtn");
 const testPushBtn = document.getElementById("testPushBtn");
 const notifBanner = document.getElementById("notifBanner");
+const notifHelpModal = document.getElementById("notifHelpModal");
 const searchTask = document.getElementById("searchTask");
 
 if (detectedTzEl) {
   detectedTzEl.textContent = `Timezone: ${USER_TIMEZONE}`;
 }
 
-// ================= NOTIFICATION BANNER HELPER =================
+// ================= NOTIFICATION BANNER & HELP MODAL =================
 function showBanner(message, type = 'info', autoDismiss = 6000) {
   if (!notifBanner) return;
   notifBanner.className = `notif-banner ${type}`;
@@ -125,6 +127,18 @@ function showBanner(message, type = 'info', autoDismiss = 6000) {
     setTimeout(() => {
       if (notifBanner) notifBanner.style.display = 'none';
     }, autoDismiss);
+  }
+}
+
+function showNotificationHelp() {
+  if (notifHelpModal) {
+    notifHelpModal.style.display = 'flex';
+  }
+}
+
+function closeNotificationHelp() {
+  if (notifHelpModal) {
+    notifHelpModal.style.display = 'none';
   }
 }
 
@@ -198,7 +212,7 @@ async function requestPushSubscription() {
   }
 
   if (Notification.permission === 'denied') {
-    showBanner("Notifications are blocked. Please enable notifications in your browser settings to receive reminders.", "warning", 10000);
+    showBanner(`Notifications are blocked in your browser settings. <button type="button" class="banner-link-btn" onclick="showNotificationHelp()">How to enable</button>`, "warning", 10000);
     updateNotificationStatusUI('denied');
     return null;
   }
@@ -206,7 +220,7 @@ async function requestPushSubscription() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      showBanner("Notifications are blocked. Please enable notifications in your browser settings to receive reminders.", "warning", 10000);
+      showBanner(`Notifications were not granted. <button type="button" class="banner-link-btn" onclick="showNotificationHelp()">How to enable</button>`, "warning", 10000);
       updateNotificationStatusUI('denied');
       return null;
     }
@@ -226,7 +240,8 @@ async function requestPushSubscription() {
 
     currentPushSubscription = sub;
     updateNotificationStatusUI('granted');
-    showBanner("✅ Notifications successfully enabled! Your background reminders are active.", "success");
+    showBanner("✅ Notifications successfully enabled! StreakUp background reminders are active.", "success");
+    render(); // Update any task card hint states
     return sub;
   } catch (err) {
     console.error("[Push] Subscription error:", err);
@@ -370,7 +385,7 @@ document.getElementById('addBtn').onclick = async () => {
   }
 
   const notificationEnabled = Boolean(enableReminderEl.checked);
-  const reminderTime = reminderTimeEl.value || "19:00";
+  const reminderTime = reminderTimeEl.value || "19:30";
 
   const newTask = {
     id: Date.now(),
@@ -483,7 +498,7 @@ async function saveReminderSettings(id) {
 
   const wasEnabled = t.notificationEnabled;
   t.notificationEnabled = enabledInput ? enabledInput.checked : false;
-  t.reminderTime = (timeInput && timeInput.value) ? timeInput.value : (t.reminderTime || "19:00");
+  t.reminderTime = (timeInput && timeInput.value) ? timeInput.value : (t.reminderTime || "19:30");
   t.timezone = USER_TIMEZONE;
 
   save();
@@ -518,6 +533,9 @@ function render() {
     t.priority.toLowerCase().includes(keyword)
   );
 
+  const hasPushSupport = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
+  const permissionState = 'Notification' in window ? Notification.permission : 'unsupported';
+
   filtered.forEach(t => {
     let progressValue = null;
 
@@ -530,13 +548,20 @@ function render() {
 
     let badge = "";
     if (t.goalType === "target" && t.currentStreak >= t.targetDays && t.targetDays > 0) {
-      badge = `<p>🏆 Goal Completed</p>`;
+      badge = `<p class="completed-badge">🏆 Goal Completed</p>`;
     }
 
-    // Reminder status pill
-    const reminderPillHtml = t.notificationEnabled
-      ? `<span class="reminder-pill on">🔔 Reminder: ON (⏰ ${formatTime12H(t.reminderTime)})</span>`
-      : `<span class="reminder-pill off">🔕 Reminder: OFF</span>`;
+    // Contextual reminder status / help note
+    let reminderNoticeHtml = "";
+    if (t.notificationEnabled) {
+      if (!hasPushSupport) {
+        reminderNoticeHtml = `<div class="reminder-notice warn">⚠️ Push notifications are unsupported on this browser.</div>`;
+      } else if (permissionState === 'denied') {
+        reminderNoticeHtml = `<div class="reminder-notice error">⚠️ Notifications are blocked in your browser. <button type="button" class="notice-link-btn" onclick="showNotificationHelp()">How to enable</button></div>`;
+      } else if (permissionState === 'default') {
+        reminderNoticeHtml = `<div class="reminder-notice info">ℹ️ Click <strong>"Enable Notifications"</strong> above to allow background delivery.</div>`;
+      }
+    }
 
     const div = document.createElement('div');
     div.className = 'task';
@@ -544,10 +569,56 @@ function render() {
     div.innerHTML = `
       <h3>${escapeHtml(t.title)}</h3>
 
-      <p>${escapeHtml(t.category)} | ${escapeHtml(t.priority)}</p>
+      <p class="task-meta">${escapeHtml(t.category)} | ${escapeHtml(t.priority)} Priority</p>
 
-      <div style="margin: 6px 0;">
-        ${reminderPillHtml}
+      <!-- ================= IMPROVED STREAKUP REMINDER UI ================= -->
+      <div class="task-reminder-card ${t.notificationEnabled ? 'active' : 'inactive'}">
+        <div class="reminder-card-top">
+          <div class="reminder-title-area">
+            <span class="reminder-bell-icon">🔔</span>
+            <span class="reminder-heading-text">Reminder</span>
+          </div>
+          <span class="reminder-status-badge ${t.notificationEnabled ? 'enabled' : 'disabled'}">
+            ${t.notificationEnabled ? '● Enabled' : '○ Off'}
+          </span>
+        </div>
+
+        <div class="reminder-card-body">
+          <div class="reminder-for-task">${escapeHtml(t.title)}</div>
+          <div class="reminder-schedule-time">
+            ${t.notificationEnabled 
+              ? `Every day at <strong>${formatTime12H(t.reminderTime)}</strong>`
+              : `No reminder scheduled`}
+          </div>
+        </div>
+
+        <div class="reminder-card-actions">
+          <button type="button" class="reminder-edit-toggle-btn" onclick="toggleEditReminder(${t.id})">
+            ${t.notificationEnabled ? '⚙️ Edit Reminder' : '🔔 Set Reminder'}
+          </button>
+        </div>
+
+        ${reminderNoticeHtml}
+      </div>
+
+      <!-- INLINE REMINDER EDITOR -->
+      <div id="edit-reminder-${t.id}" class="edit-reminder-box" style="display: none;">
+        <h4>⏰ Reminder Settings: ${escapeHtml(t.title)}</h4>
+        <div class="edit-reminder-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="edit-rem-enabled-${t.id}" ${t.notificationEnabled ? 'checked' : ''}>
+            <span>Enable daily reminder</span>
+          </label>
+          <div class="edit-time-group">
+            <label for="edit-rem-time-${t.id}">Time:</label>
+            <input type="time" id="edit-rem-time-${t.id}" value="${t.reminderTime || '19:30'}">
+          </div>
+          <div class="edit-btns">
+            <button type="button" class="save-rem-btn" onclick="saveReminderSettings(${t.id})">Save</button>
+            <button type="button" class="cancel-rem-btn" onclick="toggleEditReminder(${t.id})">Cancel</button>
+          </div>
+        </div>
+        <small class="reminder-help-text">Reminders are delivered in the background even when StreakUp is closed (${USER_TIMEZONE}).</small>
       </div>
 
       <p>🔥 Current: ${t.currentStreak}</p>
@@ -573,23 +644,7 @@ function render() {
 
       <div class="actions">
         <button class="complete-btn" onclick="complete(${t.id})">Complete Today</button>
-        <button class="reminder-btn" onclick="toggleEditReminder(${t.id})">⏰ Edit Reminder</button>
         <button class="delete-btn" onclick="del(${t.id})">Delete</button>
-      </div>
-
-      <!-- INLINE REMINDER EDITOR -->
-      <div id="edit-reminder-${t.id}" class="edit-reminder-box" style="display: none;">
-        <h4>⏰ Scheduled Reminder Settings</h4>
-        <div class="edit-reminder-row">
-          <label class="checkbox-label">
-            <input type="checkbox" id="edit-rem-enabled-${t.id}" ${t.notificationEnabled ? 'checked' : ''}>
-            <span>Enable Reminder</span>
-          </label>
-          <input type="time" id="edit-rem-time-${t.id}" value="${t.reminderTime || '19:00'}">
-          <button class="save-rem-btn" onclick="saveReminderSettings(${t.id})">Save</button>
-          <button class="cancel-rem-btn" onclick="toggleEditReminder(${t.id})">Cancel</button>
-        </div>
-        <small style="opacity: 0.8; display: block; margin-top: 6px;">Reminders fire even when the site is closed (${USER_TIMEZONE}).</small>
       </div>
 
       <textarea id="note-${t.id}" placeholder="Daily note"></textarea>
@@ -627,10 +682,17 @@ searchTask.addEventListener("input", render);
 
 // ================= IMPORT / EXPORT =================
 document.getElementById('exportBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const backupData = {
+    version: '1.3',
+    app: 'StreakUp',
+    exportedAt: new Date().toISOString(),
+    tasks,
+    taskReminders
+  };
+  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'streak-backup.json';
+  a.download = 'streakup-backup.json';
   a.click();
 };
 
@@ -643,11 +705,23 @@ document.getElementById('importFile').onchange = (e) => {
   r.onload = () => {
     try {
       const parsed = JSON.parse(r.result);
-      if (!Array.isArray(parsed)) throw new Error("Invalid backup format: expected an array of goals");
-      // Normalize imported tasks so old backups receive safe defaults
-      tasks = parsed.map(normalizeTask);
+      if (Array.isArray(parsed)) {
+        // Legacy array backup format
+        tasks = parsed.map(normalizeTask);
+      } else if (parsed && Array.isArray(parsed.tasks)) {
+        // v1.3 backup format
+        tasks = parsed.tasks.map(normalizeTask);
+        if (Array.isArray(parsed.taskReminders)) {
+          taskReminders = parsed.taskReminders;
+          saveTaskRemindersLocal();
+          renderTaskReminders();
+        }
+      } else {
+        throw new Error("Invalid backup format: expected goals data");
+      }
       save();
-      alert("✅ Backup Imported Successfully (" + tasks.length + " goals restored)");
+      render();
+      alert("✅ StreakUp Backup Imported Successfully (" + tasks.length + " goals, " + taskReminders.length + " reminders restored)");
     } catch (err) {
       alert("❌ Failed to import backup: " + err.message);
     }
@@ -659,7 +733,7 @@ document.getElementById('importFile').onchange = (e) => {
 // ================= HEADER BUTTONS =================
 notifStatusBtn.onclick = async () => {
   if (Notification.permission === 'denied') {
-    showBanner("Notifications are blocked in your browser. Please click the lock/settings icon in the address bar to allow notifications.", "warning", 10000);
+    showNotificationHelp();
     return;
   }
   await requestPushSubscription();
@@ -684,21 +758,19 @@ testPushBtn.onclick = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         subscription: sub.toJSON(),
-        title: '🔥 Streak Tracker Pro: Push Test',
-        message: 'Awesome! Background push notifications are fully working on your device!'
+        title: '🔥 StreakUp: Test Push',
+        message: 'Awesome! Background push notifications are working perfectly on this device!'
       })
     });
 
     if (res.ok) {
       showBanner("✅ Test push dispatched! Watch for your desktop/mobile notification toast.", "success");
     } else {
-      // If serverless endpoint returned an error (e.g. running statically without Netlify functions)
       const data = await res.json().catch(() => ({}));
       console.warn("Backend test push error:", data);
-      // Local fallback test via ServiceWorker
       if (swRegistration) {
-        swRegistration.showNotification('🔥 Streak Tracker Pro: Local Push Test', {
-          body: 'Local notification test passed! (Backend function status: ' + (res.status || 'offline') + ')',
+        swRegistration.showNotification('🔥 StreakUp: Local Push Test', {
+          body: 'Local notification test passed! (Backend status: ' + (res.status || 'offline') + ')',
           icon: '/assets/icons/icon-192.png',
           badge: '/assets/icons/badge-72.png'
         });
@@ -708,9 +780,8 @@ testPushBtn.onclick = async () => {
       }
     }
   } catch (err) {
-    // Local fallback test if offline / static
     if (swRegistration) {
-      swRegistration.showNotification('🔥 Streak Tracker Pro: Service Worker Test', {
+      swRegistration.showNotification('🔥 StreakUp: Service Worker Test', {
         body: 'Service worker notification active! Note: Deploy with Netlify to connect backend scheduler.',
         icon: '/assets/icons/icon-192.png',
         badge: '/assets/icons/badge-72.png'
@@ -722,6 +793,448 @@ testPushBtn.onclick = async () => {
   }
 };
 
+// ================= ONE-TIME TASK REMINDERS (v1.3) =================
+const TASK_REMINDERS_STORAGE_KEY = 'streakup_task_reminders';
+
+const toggleReminderFormBtn = document.getElementById('toggleReminderFormBtn');
+const reminderFormCard = document.getElementById('reminderFormCard');
+const reminderFormHeading = document.getElementById('reminderFormHeading');
+const reminderTitleInput = document.getElementById('reminderTitleInput');
+const reminderDescInput = document.getElementById('reminderDescInput');
+const reminderDateInput = document.getElementById('reminderDateInput');
+const reminderTimeInput = document.getElementById('reminderTimeInput');
+const saveReminderBtn = document.getElementById('saveReminderBtn');
+const cancelReminderBtn = document.getElementById('cancelReminderBtn');
+const taskRemindersList = document.getElementById('taskRemindersList');
+const remindersEmptyState = document.getElementById('remindersEmptyState');
+
+let taskReminders = loadTaskReminders();
+let editingReminderId = null;
+
+function loadTaskReminders() {
+  try {
+    const raw = localStorage.getItem(TASK_REMINDERS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error('Failed to parse task reminders from localStorage:', e);
+    return [];
+  }
+}
+
+function saveTaskRemindersLocal() {
+  try {
+    localStorage.setItem(TASK_REMINDERS_STORAGE_KEY, JSON.stringify(taskReminders));
+  } catch (e) {
+    console.error('Failed to save task reminders to localStorage:', e);
+  }
+}
+
+function getNowIsoDate() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: USER_TIMEZONE }).format(new Date());
+  } catch (e) {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+}
+
+function getNowLocalTime() {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: USER_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    return formatter.format(new Date());
+  } catch (e) {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+}
+
+function getDefaultNextHourTime() {
+  try {
+    const now = new Date();
+    const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      timeZone: USER_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    return formatter.format(nextHour);
+  } catch (e) {
+    return '18:00';
+  }
+}
+
+function formatDatePretty(isoDate) {
+  if (!isoDate) return '';
+  try {
+    const parts = isoDate.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  } catch (e) {}
+  return isoDate;
+}
+
+function formatTime12(timeStr) {
+  if (!timeStr) return '';
+  try {
+    const parts = timeStr.split(':').map(Number);
+    const h = parts[0];
+    const m = parts[1] || 0;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  } catch (e) {
+    return timeStr;
+  }
+}
+
+function isPastScheduled(reminder) {
+  const todayIso = getNowIsoDate();
+  const timeNow = getNowLocalTime();
+
+  if (todayIso > reminder.reminderDate) return true;
+  if (todayIso === reminder.reminderDate && timeNow >= reminder.reminderTime) return true;
+  return false;
+}
+
+// Background sync to Netlify Function -> Supabase
+async function syncTaskReminderToBackend(reminder) {
+  let sub = currentPushSubscription;
+  if (!sub && 'serviceWorker' in navigator && swRegistration) {
+    sub = await swRegistration.pushManager.getSubscription().catch(() => null);
+    if (sub) currentPushSubscription = sub;
+  }
+
+  if (!sub) {
+    console.log('[One-Time Reminders] Push subscription not active yet; saved locally');
+    return;
+  }
+
+  try {
+    const payload = {
+      id: reminder.id,
+      title: reminder.title,
+      description: reminder.description || '',
+      reminderDate: reminder.reminderDate,
+      reminderTime: reminder.reminderTime,
+      timezone: reminder.timezone || USER_TIMEZONE,
+      subscription: sub.toJSON ? sub.toJSON() : sub,
+      reminderSent: Boolean(reminder.reminderSent)
+    };
+
+    const res = await fetch('/.netlify/functions/save-task-reminder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      console.log('[One-Time Reminders] Synced reminder to Supabase:', reminder.id);
+    } else {
+      console.warn('[One-Time Reminders] Supabase sync warning:', res.status);
+    }
+  } catch (err) {
+    console.warn('[One-Time Reminders] Backend sync skipped (offline or function unavailable):', err.message);
+  }
+}
+
+async function deleteTaskReminderFromBackend(id) {
+  const sub = currentPushSubscription;
+  try {
+    await fetch('/.netlify/functions/delete-task-reminder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: String(id),
+        endpoint: sub ? sub.endpoint : null
+      })
+    });
+    console.log('[One-Time Reminders] Permanently deleted from Supabase:', id);
+  } catch (err) {
+    console.warn('[One-Time Reminders] Backend delete error:', err.message);
+  }
+}
+
+function renderTaskReminders() {
+  if (!taskRemindersList || !remindersEmptyState) return;
+
+  if (taskReminders.length === 0) {
+    taskRemindersList.style.display = 'none';
+    remindersEmptyState.style.display = 'block';
+    taskRemindersList.innerHTML = '';
+    return;
+  }
+
+  taskRemindersList.style.display = 'grid';
+  remindersEmptyState.style.display = 'none';
+
+  // Sort chronologically by date and time
+  const sorted = [...taskReminders].sort((a, b) => {
+    const dtA = `${a.reminderDate} ${a.reminderTime}`;
+    const dtB = `${b.reminderDate} ${b.reminderTime}`;
+    return dtA.localeCompare(dtB);
+  });
+
+  taskRemindersList.innerHTML = sorted.map((rem) => {
+    const isOverdue = Boolean(rem.reminderSent || isPastScheduled(rem));
+    const safeTitle = escapeHtml(rem.title);
+    const safeDesc = rem.description ? escapeHtml(rem.description) : '';
+    const dateFormatted = formatDatePretty(rem.reminderDate);
+    const timeFormatted = formatTime12(rem.reminderTime);
+
+    return `
+      <div class="task-reminder-card ${isOverdue ? 'is-overdue' : 'is-upcoming'}" data-id="${rem.id}">
+        <div class="reminder-card-top">
+          <div class="reminder-card-title">🔔 ${safeTitle}</div>
+          <span class="reminder-status-badge ${isOverdue ? 'overdue' : 'upcoming'}">
+            ${isOverdue ? '🟠 Overdue' : '🟢 Upcoming'}
+          </span>
+        </div>
+
+        ${safeDesc ? `<p class="reminder-card-desc"><span class="desc-icon">📝</span> ${safeDesc}</p>` : ''}
+
+        <div class="reminder-card-meta">
+          <span>📅 ${dateFormatted}</span>
+          <span>🕐 ${timeFormatted}</span>
+        </div>
+
+        <div class="reminder-card-actions">
+          <button class="reminder-action-btn btn-complete" onclick="markReminderCompleted('${rem.id}')" title="Mark done and permanently delete">✓ Completed</button>
+          <button class="reminder-action-btn btn-edit" onclick="openEditReminderForm('${rem.id}')" title="Edit reminder">✏️ Edit</button>
+          <button class="reminder-action-btn btn-delete" onclick="deleteTaskReminder('${rem.id}')" title="Delete reminder">🗑️ Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openAddReminderForm() {
+  editingReminderId = null;
+  if (reminderFormHeading) reminderFormHeading.textContent = '🔔 New Reminder';
+  if (saveReminderBtn) saveReminderBtn.textContent = 'Create Reminder';
+  if (reminderTitleInput) reminderTitleInput.value = '';
+  if (reminderDescInput) reminderDescInput.value = '';
+  if (reminderDateInput) {
+    reminderDateInput.value = getNowIsoDate();
+    reminderDateInput.min = getNowIsoDate();
+  }
+  if (reminderTimeInput) {
+    reminderTimeInput.value = getDefaultNextHourTime();
+  }
+  if (reminderFormCard) reminderFormCard.style.display = 'block';
+  if (toggleReminderFormBtn) toggleReminderFormBtn.textContent = '− Close Form';
+  if (reminderTitleInput) reminderTitleInput.focus();
+}
+
+function closeReminderForm() {
+  editingReminderId = null;
+  if (reminderFormCard) reminderFormCard.style.display = 'none';
+  if (toggleReminderFormBtn) toggleReminderFormBtn.textContent = '+ Add Reminder';
+  if (reminderTitleInput) reminderTitleInput.value = '';
+  if (reminderDescInput) reminderDescInput.value = '';
+}
+
+function openEditReminderForm(id) {
+  const rem = taskReminders.find(r => r.id === id);
+  if (!rem) return;
+
+  editingReminderId = id;
+  if (reminderFormHeading) reminderFormHeading.textContent = '✏️ Edit Reminder';
+  if (saveReminderBtn) saveReminderBtn.textContent = 'Save Changes';
+  if (reminderTitleInput) reminderTitleInput.value = rem.title || '';
+  if (reminderDescInput) reminderDescInput.value = rem.description || '';
+  if (reminderDateInput) {
+    reminderDateInput.value = rem.reminderDate || getNowIsoDate();
+    reminderDateInput.min = '';
+  }
+  if (reminderTimeInput) {
+    reminderTimeInput.value = rem.reminderTime || '18:00';
+  }
+
+  if (reminderFormCard) {
+    reminderFormCard.style.display = 'block';
+    reminderFormCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  if (toggleReminderFormBtn) toggleReminderFormBtn.textContent = '− Close Form';
+  if (reminderTitleInput) reminderTitleInput.focus();
+}
+
+async function handleSaveReminder() {
+  const title = (reminderTitleInput ? reminderTitleInput.value : '').trim();
+  const desc = (reminderDescInput ? reminderDescInput.value : '').trim();
+  const date = reminderDateInput ? reminderDateInput.value : '';
+  const time = reminderTimeInput ? reminderTimeInput.value : '';
+
+  if (!title) {
+    alert('Please enter a reminder title.');
+    if (reminderTitleInput) reminderTitleInput.focus();
+    return;
+  }
+
+  if (!date) {
+    alert('Please select a reminder date.');
+    if (reminderDateInput) reminderDateInput.focus();
+    return;
+  }
+
+  if (!time) {
+    alert('Please select a reminder time.');
+    if (reminderTimeInput) reminderTimeInput.focus();
+    return;
+  }
+
+  // Prevent scheduling in the past
+  if (isPastScheduled({ reminderDate: date, reminderTime: time })) {
+    alert('Please choose a future date and time.');
+    if (reminderDateInput) reminderDateInput.focus();
+    return;
+  }
+
+  // Ensure push notification capability is ready if not already
+  if (!currentPushSubscription && Notification.permission !== 'denied') {
+    await requestPushSubscription();
+  }
+
+  if (editingReminderId) {
+    const idx = taskReminders.findIndex(r => r.id === editingReminderId);
+    if (idx !== -1) {
+      const existing = taskReminders[idx];
+      const dateOrTimeChanged = (existing.reminderDate !== date || existing.reminderTime !== time);
+
+      existing.title = title;
+      existing.description = desc;
+      existing.reminderDate = date;
+      existing.reminderTime = time;
+      // If date/time changed, reset reminderSent so notification can fire at the new time
+      if (dateOrTimeChanged) {
+        existing.reminderSent = false;
+      }
+      existing.updatedAt = new Date().toISOString();
+
+      saveTaskRemindersLocal();
+      renderTaskReminders();
+      syncTaskReminderToBackend(existing);
+      showBanner(`✅ Reminder "${title}" updated successfully!`, 'success');
+    }
+  } else {
+    // New reminder
+    const newReminder = {
+      id: 'tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      title,
+      description: desc,
+      reminderDate: date,
+      reminderTime: time,
+      timezone: USER_TIMEZONE,
+      reminderSent: false,
+      createdAt: new Date().toISOString()
+    };
+
+    taskReminders.push(newReminder);
+    saveTaskRemindersLocal();
+    renderTaskReminders();
+    syncTaskReminderToBackend(newReminder);
+    showBanner(`⏰ Reminder scheduled for ${formatDatePretty(date)} at ${formatTime12(time)}!`, 'success');
+  }
+
+  closeReminderForm();
+}
+
+async function markReminderCompleted(id) {
+  // 1. Permanently delete from Supabase task_reminders
+  deleteTaskReminderFromBackend(id);
+
+  // 2. Remove permanently from local storage
+  taskReminders = taskReminders.filter(r => r.id !== id);
+  saveTaskRemindersLocal();
+
+  // 3. Immediately re-render UI
+  renderTaskReminders();
+
+  showBanner("Reminder completed ✓", "success", 4000);
+  // Important: streaks are completely untouched!
+}
+
+async function deleteTaskReminder(id) {
+  const rem = taskReminders.find(r => r.id === id);
+  const title = rem ? rem.title : 'this reminder';
+
+  if (!confirm(`Are you sure you want to delete "${title}"?`)) {
+    return;
+  }
+
+  // 1. Permanently delete from Supabase task_reminders
+  deleteTaskReminderFromBackend(id);
+
+  // 2. Remove permanently from local storage
+  taskReminders = taskReminders.filter(r => r.id !== id);
+  saveTaskRemindersLocal();
+
+  // 3. Immediately re-render UI
+  renderTaskReminders();
+
+  showBanner(`🗑️ "${title}" deleted.`, 'info', 4000);
+}
+
+// Attach event listeners for one-time task reminders
+if (toggleReminderFormBtn) {
+  toggleReminderFormBtn.onclick = () => {
+    if (reminderFormCard && reminderFormCard.style.display === 'none') {
+      openAddReminderForm();
+    } else {
+      closeReminderForm();
+    }
+  };
+}
+
+if (saveReminderBtn) {
+  saveReminderBtn.onclick = handleSaveReminder;
+}
+
+if (cancelReminderBtn) {
+  cancelReminderBtn.onclick = closeReminderForm;
+}
+
+// Make helper functions globally accessible for inline onclicks
+window.showNotificationHelp = showNotificationHelp;
+window.closeNotificationHelp = closeNotificationHelp;
+window.toggleEditReminder = toggleEditReminder;
+window.saveReminderSettings = saveReminderSettings;
+window.complete = complete;
+window.del = del;
+window.addNote = addNote;
+window.markReminderCompleted = markReminderCompleted;
+window.deleteTaskReminder = deleteTaskReminder;
+window.openEditReminderForm = openEditReminderForm;
+
+// Listen for Service Worker background notification events
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'REMINDER_COMPLETED_VIA_NOTIFICATION') {
+      const id = event.data.reminderId;
+      taskReminders = taskReminders.filter(r => r.id !== id);
+      saveTaskRemindersLocal();
+      renderTaskReminders();
+      showBanner("Reminder completed ✓", "success", 4000);
+    }
+  });
+}
+
 // ================= INITIALIZE =================
 registerServiceWorker();
 render();
+renderTaskReminders();

@@ -104,7 +104,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log('================================================================');
-  console.log(`🔥 Streak Tracker Pro v1.1 is LIVE locally!`);
+  console.log(`🔥 StreakUp v1.2 is LIVE locally!`);
   console.log(`👉 URL: http://localhost:${PORT}`);
   console.log(`Local Netlify Functions active at: http://localhost:${PORT}/.netlify/functions/*`);
   console.log('================================================================');

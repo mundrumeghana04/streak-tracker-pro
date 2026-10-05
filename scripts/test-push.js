@@ -38,7 +38,7 @@ try {
 }
 
 const payload = JSON.stringify({
-  title: '🔥 Streak Tracker Pro: Direct Push Test',
+  title: '🔥 StreakUp: Direct Push Test',
   body: 'If you see this, background Push Notifications are operational!',
   icon: '/assets/icons/icon-192.png',
   badge: '/assets/icons/badge-72.png',

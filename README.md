@@ -1,6 +1,8 @@
-# 🔥 Streak Tracker Pro (v1.1)
+# 🔥 StreakUp (v1.3)
 
-A responsive habit and goal tracking Progressive Web Application (PWA) built with HTML, CSS, JavaScript, and a **real background scheduled Web Push notification system**.
+> **Build consistency. Level up every day.**
+
+A modern habit tracking and task reminder Progressive Web Application (PWA) built with HTML, CSS, JavaScript, and a **real background scheduled Web Push notification system**.
 
 Reminders are delivered directly to your device even when the website tab or browser is closed.
 
@@ -8,25 +10,35 @@ Reminders are delivered directly to your device even when the website tab or bro
 
 ## 🚀 Key Features
 
-- **Daily Streak Tracking**: Track individual habit streaks and celebrate milestones.
+### 1. 🔥 Daily Habits & Streaks (Recurring)
+- **Habit Tracking**: Track individual habit streaks and celebrate personal bests.
 - **Target & Unlimited Goals**:
   - *Target Goals*: Visual progress bar towards a set target (e.g., 30 days). Automatically completes and stops reminders upon achievement.
   - *Unlimited Goals*: Infinite habit building with no percentage cap.
-- **Real Background Push Reminders**:
-  - Optional daily reminder per goal (e.g. 7:00 PM).
-  - Background delivery via Web Push API and Service Worker — **does not require the website tab to be kept open**.
-  - Smart delivery: Automatically skips notifications if the goal was already marked "Completed Today".
+- **Recurring Daily Reminders**:
+  - Optional daily reminder per goal (e.g., 7:30 PM).
+  - Skips notifications if the goal was already marked "Completed Today".
   - Dynamic motivational copy tailored to task title and category (Study, Coding, Fitness, Reading, etc.).
   - Deduplication: Strictly sends at most once per scheduled occurrence per day.
-- **Progressive Web App (PWA)**:
-  - Installable on desktop and mobile.
-  - Full offline capability with cached app shell.
-- **Categories & Priorities**: Organize by Study, Fitness, Health, Reading, Coding, Meditation, Work, etc.
-- **Daily Notes**: Keep dated reflections and logs for each habit.
+
+### 2. ⏰ Task Reminders (One-Time Alerts) — *NEW in v1.3*
+- **One-Time Event Scheduling**: Distinct, separate reminders for assignments, meetings, deadlines, and appointments.
+- **Date & Time Precision**: Set exact date and time (e.g., *Oct 6, 2026 at 5:00 PM*).
+- **Status Indicators**:
+  - `🟢 Upcoming`: Active future alerts.
+  - `🟠 Overdue`: Past scheduled alerts that have not yet been marked completed.
+- **Exactly-Once Background Push**: Fires exactly one Web Push notification when the scheduled date and time arrives, even with the website closed.
+- **Permanent Deletion on Completion**: Clicking `✓ Mark Completed` permanently deletes the record from the Supabase database and UI immediately (does not affect habit streaks).
+- **Edit & Reschedule**: Changing date or time automatically resets the delivery flag so the new time triggers properly.
+
+### 3. 📱 PWA & Offline Support
+- **Progressive Web App (PWA)**: Installable on Windows, macOS, Android, and iOS.
+- **Offline Reliability**: Caches the app shell with Service Worker (`sw.js`).
 - **Dark & Light Mode**: Seamless theme switching with saved preference.
 - **Search & Filter**: Real-time keyword filtering.
-- **Backup & Restore**: Export and import full JSON backups (with automatic migration for backwards compatibility).
+- **Backup & Restore**: Export and import full JSON backups (with seamless migration for goals and task reminders).
 - **Timezone Aware**: Automatically detects your local timezone (e.g., `Asia/Kolkata`) with worldwide compatibility.
+
 
 ---
 
@@ -40,7 +52,7 @@ Reminders are delivered directly to your device even when the website tab or bro
           ▼
 [ Netlify Functions + Supabase Database ]
           │  4. Stores active reminder & push subscription
-          │  5. Hourly scheduler evaluates pending reminders
+          │  5. 5-minute scheduler evaluates pending reminders
           │  6. Validates: NOT completed today & scheduled time reached
           ▼
 [ Web Push Service (FCM / APNs) ]
@@ -49,7 +61,7 @@ Reminders are delivered directly to your device even when the website tab or bro
 [ Service Worker (sw.js) ]
           │  8. push event wakes up background service worker
           │  9. showNotification() displays native OS toast
-          │ 10. Clicking notification focuses or opens Streak Tracker Pro
+          │ 10. Clicking notification focuses or opens StreakUp
 ```
 
 ### Browser & OS Behavior Summary
@@ -72,8 +84,9 @@ Reminders are delivered directly to your device even when the website tab or bro
 - **Offline / PWA**: Web App Manifest (`manifest.json`), Service Worker (`sw.js`), Cache API
 - **Push Pipeline**: Web Push API, Notification API, `web-push` library with RFC 8292 VAPID
 - **Serverless Backend**: Netlify Functions (`netlify/functions/`)
-- **Database**: Supabase PostgreSQL (`streak_reminders` table)
+- **Database**: Supabase PostgreSQL (`streak_reminders` and `task_reminders` tables)
 - **Deployment**: Netlify & GitHub
+
 
 ---
 
@@ -84,31 +97,29 @@ Reminders are delivered directly to your device even when the website tab or bro
 npm install
 ```
 
-### 2. Generate VAPID Keys
-Run the included generator to create your unique VAPID public and private key pair:
+### 2. Run Local Development Server
 ```bash
-npm run generate-vapid
+npm start
 ```
+Opens local PWA server with simulated Netlify functions at `http://localhost:3000`.
 
 ### 3. Set Up Supabase Database (Free Tier)
-1. Go to [https://supabase.com](https://supabase.com) and create a free project.
-2. In your Supabase dashboard, open the **SQL Editor**.
-3. Copy and run the entire script in [`supabase_schema.sql`](supabase_schema.sql).
-4. Go to **Project Settings** → **API** and copy:
-   - **Project URL**
-   - **Service Role Secret** (keep this confidential)
+1. In your Supabase dashboard, open the **SQL Editor**.
+2. For fresh installs, run [`supabase_schema.sql`](supabase_schema.sql).
+3. If upgrading from v1.1 or v1.2, run [`supabase_task_reminders.sql`](supabase_task_reminders.sql) to add the `task_reminders` table without touching your existing `streak_reminders` habits table.
+4. Under **Project Settings** → **API**, copy your **Project URL** and **Service Role Secret**.
 
 ### 4. Configure Environment Variables
-Create a `.env` file in the project root (copied from `.env.example`):
+Create a `.env` file in the project root:
 ```env
-VAPID_PUBLIC_KEY=your_generated_public_key
-VAPID_PRIVATE_KEY=your_generated_private_key
+VAPID_PUBLIC_KEY=your_vapid_public_key
+VAPID_PRIVATE_KEY=your_vapid_private_key
 VAPID_SUBJECT=mailto:admin@streaktracker.pro
 
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-CRON_SECRET=your_custom_secret_for_cron
+CRON_SECRET=streak_tracker_cron_secret_key_123
 ```
 
 ---
@@ -116,7 +127,7 @@ CRON_SECRET=your_custom_secret_for_cron
 ## 🚀 Deployment to Netlify
 
 ### Netlify Environment Variables
-In your Netlify site dashboard under **Site configuration** → **Environment variables**, add:
+In your Netlify site dashboard under **Site configuration** → **Environment variables**:
 1. `VAPID_PUBLIC_KEY`
 2. `VAPID_PRIVATE_KEY`
 3. `VAPID_SUBJECT`
@@ -127,38 +138,22 @@ In your Netlify site dashboard under **Site configuration** → **Environment va
 ### Deploying via Git
 ```bash
 git add .
-git commit -m "Upgrade to v1.1: PWA, scheduled background push notifications, and Netlify Functions"
+git commit -m "feat: Upgrade to StreakUp v1.3 with separate one-time task reminders system"
 git push origin main
 ```
 Netlify will automatically detect `netlify.toml`, build the functions, and deploy the PWA.
-
-### Setting up Cron Triggers
-- **Option A (Netlify Scheduled Functions)**: Pre-configured in `netlify.toml` with `@hourly`.
-- **Option B (Minute-by-minute with cron-job.org / GitHub Actions)**:
-  Configure a free job on [cron-job.org](https://cron-job.org) targeting:
-  `https://your-site.netlify.app/.netlify/functions/check-reminders?secret=YOUR_CRON_SECRET`
-  running every 5, 10, or 15 minutes.
 
 ---
 
 ## 🧪 Verification & Testing
 
-Run the automated test suite locally:
+Run the comprehensive automated test suite locally:
 ```bash
-node scripts/test-scheduler-logic.js
+npm test
 ```
-
-### Manual Verification Checklist
-1. **TEST 1 (Subscription)**: Create a goal with "Enable Daily Reminder" checked. Grant notification permission. Verify button displays `🔔 Notifications: Enabled`.
-2. **TEST 2 (Test Alert)**: Click the **🧪 Test Push** button in the header. Verify the push notification appears on your device screen.
-3. **TEST 3 (Completed Today)**: Mark the goal as "Complete Today". Verify that `lastCompleted` updates and the reminder is skipped for today.
-4. **TEST 4 (Independent Goals)**: Create two goals with different reminder times (e.g. 07:00 and 19:00). Verify each goal card displays its independent pill.
-5. **TEST 5 (Closed Tab)**: Close the browser tab. Trigger the reminder check. Verify the native push notification displays without the site open.
-6. **TEST 6 (Persistence)**: Refresh the page. Verify all tasks, streaks, notes, and reminder settings remain intact.
-7. **TEST 7 (Legacy Import)**: Import an older `streak-backup.json`. Verify tasks import cleanly with safe notification defaults.
-8. **TEST 8 (Export)**: Export a backup. Verify the downloaded JSON file contains the new reminder properties.
-9. **TEST 9 (Themes)**: Toggle Dark and Light mode. Verify reminder badges, pills, and inputs adapt their contrast and colors.
-10. **TEST 10 (PWA Install)**: Click the browser's install icon. Launch the standalone application and verify notification reception.
+This runs both:
+- Habit streak scheduler logic tests (`scripts/test-scheduler-logic.js`)
+- One-time task reminders lifecycle & push tests (`scripts/test-one-time-reminders.js`)
 
 ---
 

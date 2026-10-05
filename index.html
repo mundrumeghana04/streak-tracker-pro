@@ -4,17 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<meta name="description" content="Track daily habits, goals and streaks with Streak Tracker Pro - featuring real scheduled background push reminders">
-<meta name="theme-color" content="#6366f1">
+<meta name="description" content="StreakUp - Build consistency. Level up every day with habit tracking and real scheduled background push reminders">
+<meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreakTracker">
+<meta name="apple-mobile-web-app-title" content="StreakUp">
 
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
-<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16x16.png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 
-<title>Streak Tracker Pro</title>
+<title>StreakUp</title>
 
 <link rel="stylesheet" href="css/style.css">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -26,9 +27,12 @@
 
     <!-- ================= HEADER ================= -->
     <header>
-        <div>
-            <h1>🔥 Streak Tracker Pro</h1>
-            <p class="subtitle">Build consistency one day at a time</p>
+        <div class="brand-header">
+            <img src="assets/icons/icon-192.png" alt="StreakUp Icon" class="app-logo-icon" />
+            <div>
+                <h1>StreakUp</h1>
+                <p class="subtitle">Build consistency. Level up every day.</p>
+            </div>
         </div>
 
         <div class="header-actions">
@@ -40,6 +44,28 @@
 
     <!-- ================= NOTIFICATION BANNER ================= -->
     <div id="notifBanner" class="notif-banner" style="display: none;"></div>
+
+    <!-- ================= NOTIFICATION HELP MODAL ================= -->
+    <div id="notifHelpModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>🔔 Enable Notifications for StreakUp</h3>
+                <button class="modal-close-btn" onclick="closeNotificationHelp()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>To receive your scheduled reminders even when StreakUp is closed, please allow browser notifications:</p>
+                <ol class="help-steps">
+                    <li>Click the <strong>🔒 View site information</strong> (or 🎛️ Tune icon) on the left side of your browser address bar.</li>
+                    <li>Locate <strong>Notifications</strong> in the permissions menu.</li>
+                    <li>Change the setting from <em>Blocked</em> or <em>Ask</em> to <strong>Allow</strong>.</li>
+                    <li>Reload the page or click <strong>Enable Notifications</strong> in the header.</li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn-primary" onclick="closeNotificationHelp()">Got it</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ================= SEARCH ================= -->
     <section class="search-section">
@@ -112,31 +138,18 @@
             <div class="reminder-form-group">
                 <label class="checkbox-label">
                     <input type="checkbox" id="enableReminder">
-                    <span>🔔 Enable Daily Reminder</span>
+                    <span>🔔 Set Daily Reminder</span>
                 </label>
 
                 <div id="reminderTimeGroup" class="reminder-time-group" style="display: none;">
                     <label for="reminderTime">Time:</label>
-                    <input type="time" id="reminderTime" value="19:00" />
+                    <input type="time" id="reminderTime" value="19:30" />
                     <span id="detectedTz" class="tz-tag"></span>
                 </div>
             </div>
 
             <button id="addBtn">Add Task</button>
 
-        </div>
-
-    </section>
-
-    <!-- ================= BACKUP ================= -->
-    <section class="backup-section">
-
-        <h2>Backup & Restore</h2>
-
-        <div class="backup-actions">
-            <button id="exportBtn">📤 Export Backup</button>
-            <label for="importFile" class="file-label">📥 Import Backup</label>
-            <input type="file" id="importFile" accept=".json" style="display: none;" />
         </div>
 
     </section>
@@ -155,9 +168,88 @@
 
     </section>
 
+    <!-- ================= ONE-TIME TASK REMINDERS ================= -->
+    <section class="task-reminders-section">
+
+        <div class="reminders-header-bar">
+            <div>
+                <h2>🔔 Reminders</h2>
+                <p class="section-subtitle">One-time alerts for assignments, meetings & deadlines</p>
+            </div>
+            <button id="toggleReminderFormBtn" class="add-reminder-toggle-btn" type="button">+ Add Reminder</button>
+        </div>
+
+        <!-- Add / Edit Reminder Form Card -->
+        <div id="reminderFormCard" class="reminder-form-card" style="display: none;">
+            <div class="reminder-form-header">
+                <h3 id="reminderFormHeading">🔔 New Reminder</h3>
+                <span class="reminder-form-badge">One-time notification</span>
+            </div>
+
+            <div class="reminder-form-grid">
+                <div class="form-field full-width">
+                    <label for="reminderTitleInput">Reminder title <span class="required">*</span></label>
+                    <input type="text" id="reminderTitleInput" placeholder="e.g., Submit ML Assignment, Project Meeting, Dentist Call" maxlength="80" autocomplete="off" />
+                </div>
+
+                <div class="form-field full-width">
+                    <label for="reminderDescInput">Description <span class="optional">(optional)</span></label>
+                    <textarea id="reminderDescInput" rows="2" placeholder="e.g., Upload assignment PDF to LMS before deadline" maxlength="200"></textarea>
+                </div>
+
+                <div class="form-field half-width">
+                    <label for="reminderDateInput">Date <span class="required">*</span></label>
+                    <input type="date" id="reminderDateInput" />
+                </div>
+
+                <div class="form-field half-width">
+                    <label for="reminderTimeInput">Time <span class="required">*</span></label>
+                    <input type="time" id="reminderTimeInput" />
+                </div>
+            </div>
+
+            <div class="reminder-form-actions">
+                <button id="saveReminderBtn" class="save-reminder-btn" type="button">Create Reminder</button>
+                <button id="cancelReminderBtn" class="cancel-reminder-btn" type="button">Cancel</button>
+            </div>
+        </div>
+
+        <!-- List of Reminders -->
+        <div id="taskRemindersList" class="task-reminders-grid"></div>
+
+        <!-- Empty State -->
+        <div id="remindersEmptyState" class="reminders-empty-state">
+            <div class="reminders-empty-icon">🔔</div>
+            <h3>No Reminders Yet</h3>
+            <p>Schedule one-time alerts for deadlines, assignments, and meetings.</p>
+        </div>
+
+    </section>
+
+    <!-- ================= BACKUP ================= -->
+    <section class="backup-section">
+
+        <h2>Backup & Restore</h2>
+
+        <div class="backup-actions">
+            <button id="exportBtn">📤 Export Backup</button>
+            <label for="importFile" class="file-label">📥 Import Backup</label>
+            <input type="file" id="importFile" accept=".json" style="display: none;" />
+        </div>
+
+    </section>
+
     <!-- ================= FOOTER ================= -->
-    <footer>
-        <p>© 2026 Built with ❤️ by Mundru Meghana • PWA & Background Push Enabled</p>
+    <footer class="app-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="footer-logo">🔥 StreakUp</span>
+                <p class="footer-tagline">Build consistency. Level up every day.</p>
+            </div>
+            <div class="footer-meta">
+                <p>© 2026 StreakUp • Built with ❤️ by Mundru Meghana</p>
+            </div>
+        </div>
     </footer>
 
 </div>

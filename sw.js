@@ -1,7 +1,7 @@
-// Streak Tracker Pro - Service Worker (sw.js)
-// Version 1.1.0 - Full Offline PWA & Background Push Support
+// StreakUp - Service Worker (sw.js)
+// Version 1.3.0 - Offline PWA & Background Push Support
 
-const CACHE_NAME = 'streak-tracker-pro-v1.1.0';
+const CACHE_NAME = 'streakup-v1.3.0';
 
 const STATIC_ASSETS = [
   '/',
@@ -9,11 +9,13 @@ const STATIC_ASSETS = [
   '/css/style.css',
   '/js/script.js',
   '/manifest.json',
+  '/favicon.png',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
   '/assets/icons/badge-72.png',
   '/assets/icons/maskable-512.png',
-  '/assets/icons/icon.svg',
+  '/assets/icons/favicon-32x32.png',
+  '/assets/icons/apple-touch-icon.png',
   'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'
 ];
 
@@ -21,7 +23,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Use catch for individual assets so external network hiccups don't block install
       return Promise.allSettled(
         STATIC_ASSETS.map((url) =>
           cache.add(url).catch((err) => {
@@ -75,25 +76,18 @@ self.addEventListener('fetch', (event) => {
               requestUrl.hostname.includes('fonts.gstatic.com'))
           ) {
             const responseToCache = networkResponse.clone();
-
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
             });
           }
-
           return networkResponse;
         })
         .catch(() => {
-          // If offline and this is a page navigation,
-          // return the cached app shell.
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html').then((response) => {
               return response || caches.match('/');
             });
           }
-
-          // IMPORTANT:
-          // Never return undefined from respondWith().
           return cachedResponse || Response.error();
         });
 
@@ -112,18 +106,43 @@ self.addEventListener('push', (event) => {
       payload = event.data.json();
     } catch (e) {
       payload = {
-        title: "🔥 Streak Tracker Pro",
+        title: "🔔 StreakUp Reminder",
         body: event.data.text()
       };
     }
   }
 
-  const title = payload.title || "🔥 Don't break your streak!";
-  const body = payload.body || "Complete today's goal to keep your streak alive.";
+  const isTaskReminder = payload.data && payload.data.type === 'task-reminder';
+
+  const title = payload.title || (isTaskReminder ? "🔔 StreakUp Reminder" : "🔥 Don't break your streak! - StreakUp");
+  const body = payload.body || "Your reminder is due now.";
   const icon = payload.icon || "/assets/icons/icon-192.png";
   const badge = payload.badge || "/assets/icons/badge-72.png";
-  const tag = payload.tag || ("streak-" + Date.now());
+  const tag = payload.tag || (isTaskReminder ? `task-${Date.now()}` : `streak-${Date.now()}`);
   const data = payload.data || { url: "/" };
+
+  // Contextual actions based on reminder type
+  const actions = isTaskReminder
+    ? [
+        {
+          action: 'complete-task-reminder',
+          title: '✓ Completed'
+        },
+        {
+          action: 'open-app',
+          title: 'Open StreakUp'
+        }
+      ]
+    : [
+        {
+          action: 'open-app',
+          title: '🚀 Open StreakUp'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ];
 
   const notificationOptions = {
     body,
@@ -134,16 +153,7 @@ self.addEventListener('push', (event) => {
     requireInteraction: false,
     vibrate: [200, 100, 200],
     data,
-    actions: [
-      {
-        action: 'open-app',
-        title: '🚀 Open Streak Tracker'
-      },
-      {
-        action: 'dismiss',
-        title: 'Dismiss'
-      }
-    ]
+    actions
   };
 
   event.waitUntil(
@@ -159,11 +169,38 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
+  // Handle "✓ Completed" button click directly on the notification
+  if (event.action === 'complete-task-reminder') {
+    const reminderId = event.notification.data && event.notification.data.reminderId;
+    if (reminderId) {
+      event.waitUntil(
+        Promise.all([
+          // Permanently delete from Supabase via Netlify function
+          fetch('/.netlify/functions/delete-task-reminder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: String(reminderId) })
+          }).catch((err) => console.warn('[SW] Remote delete error:', err)),
+          // Notify any open StreakUp windows to remove from local storage and UI
+          clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            windowClients.forEach((client) => {
+              client.postMessage({
+                type: 'REMINDER_COMPLETED_VIA_NOTIFICATION',
+                reminderId
+              });
+            });
+          })
+        ])
+      );
+    }
+    return;
+  }
+
   const targetUrl = (event.notification.data && event.notification.data.url) || '/';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // If a Streak Tracker Pro window/tab is already open, focus it
+      // If a StreakUp window/tab is already open, focus it
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           if ('navigate' in client && targetUrl !== '/') {
@@ -180,3 +217,4 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+

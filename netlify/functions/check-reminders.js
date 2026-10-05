@@ -252,18 +252,34 @@ console.error('[DEBUG] FINAL RESULTS:', JSON.stringify(results, null, 2));
   return results;
 }
 
+const { runCheckTaskReminders } = require('./check-task-reminders');
+
 exports.handler = async (event, context) => {
+  if (event && event.httpMethod === 'OPTIONS') {
+    return getCorsResponse(204, {});
+  }
+
   try {
     console.log('[DEBUG] check-reminders handler started');
 
-    const results = await runCheckReminders();
+    // 1. Evaluate existing streak habits reminders (existing logic, completely untouched)
+    const goalResults = await runCheckReminders();
 
-    console.log('[DEBUG] check-reminders completed:', results);
+    // 2. Evaluate one-time task reminders
+    let taskResults = null;
+    try {
+      taskResults = await runCheckTaskReminders();
+    } catch (taskErr) {
+      console.error('[check-reminders] Error checking one-time task reminders:', taskErr);
+    }
+
+    console.log('[DEBUG] check-reminders completed:', { goalResults, taskResults });
 
     return getCorsResponse(200, {
       success: true,
       timestamp: new Date().toISOString(),
-      results
+      results: goalResults,
+      taskResults
     });
   } catch (err) {
     console.error('[check-reminders] Scheduler error:', err);
@@ -273,4 +289,4 @@ exports.handler = async (event, context) => {
       details: err.message
     });
   }
-};
+};

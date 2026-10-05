@@ -253,41 +253,13 @@ console.error('[DEBUG] FINAL RESULTS:', JSON.stringify(results, null, 2));
 }
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return getCorsResponse(204, {});
-  }
-
-  // Security check applies only to direct HTTP calls.
-  // Netlify scheduled-function invocations do not provide
-  // the browser-style Authorization header.
-  if (event.httpMethod) {
-    const expectedSecret = process.env.CRON_SECRET;
-
-    if (expectedSecret) {
-      const authHeader =
-        (event.headers &&
-          (event.headers.authorization || event.headers.Authorization)) ||
-        '';
-
-      const querySecret =
-        (event.queryStringParameters &&
-          event.queryStringParameters.secret) ||
-        '';
-
-      const bearerToken = authHeader.replace(/^Bearer\s+/i, '');
-
-      if (
-        bearerToken !== expectedSecret &&
-        querySecret !== expectedSecret
-      ) {
-        return getCorsResponse(401, {
-          error: 'Unauthorized: Invalid or missing cron secret'
-        });
-      }
-    }
-  }  
   try {
+    console.log('[DEBUG] check-reminders handler started');
+
     const results = await runCheckReminders();
+
+    console.log('[DEBUG] check-reminders completed:', results);
+
     return getCorsResponse(200, {
       success: true,
       timestamp: new Date().toISOString(),
@@ -295,6 +267,7 @@ exports.handler = async (event, context) => {
     });
   } catch (err) {
     console.error('[check-reminders] Scheduler error:', err);
+
     return getCorsResponse(500, {
       error: 'Failed to execute reminder check',
       details: err.message

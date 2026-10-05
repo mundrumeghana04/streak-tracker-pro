@@ -177,18 +177,35 @@ exports.handler = async (event, context) => {
     return getCorsResponse(204, {});
   }
 
-  // Security check: If CRON_SECRET is configured, check Authorization header
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret) {
-    const authHeader = (event.headers && (event.headers.authorization || event.headers.Authorization)) || '';
-    const querySecret = (event.queryStringParameters && event.queryStringParameters.secret) || '';
-    const bearerToken = authHeader.replace(/^Bearer\s+/i, '');
+  // Security check applies only to direct HTTP calls.
+  // Netlify scheduled-function invocations do not provide
+  // the browser-style Authorization header.
+  if (event.httpMethod) {
+    const expectedSecret = process.env.CRON_SECRET;
 
-    if (bearerToken !== expectedSecret && querySecret !== expectedSecret) {
-      return getCorsResponse(401, { error: 'Unauthorized: Invalid or missing cron secret' });
+    if (expectedSecret) {
+      const authHeader =
+        (event.headers &&
+          (event.headers.authorization || event.headers.Authorization)) ||
+        '';
+
+      const querySecret =
+        (event.queryStringParameters &&
+          event.queryStringParameters.secret) ||
+        '';
+
+      const bearerToken = authHeader.replace(/^Bearer\s+/i, '');
+
+      if (
+        bearerToken !== expectedSecret &&
+        querySecret !== expectedSecret
+      ) {
+        return getCorsResponse(401, {
+          error: 'Unauthorized: Invalid or missing cron secret'
+        });
+      }
     }
-  }
-
+  }  
   try {
     const results = await runCheckReminders();
     return getCorsResponse(200, {

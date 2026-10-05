@@ -248,8 +248,7 @@ async function runCheckReminders() {
     }
   }
 
-  console.log('[DEBUG] FINAL RESULTS:', results);
-
+console.error('[DEBUG] FINAL RESULTS:', JSON.stringify(results, null, 2));
   return results;
 }
 

@@ -7,7 +7,7 @@
 
 # Scheduled function runs on Netlify to evaluate reminders
 [functions."check-reminders"]
-  schedule = "@hourly"
+  schedule = "*/5 * * * *"
 
 # PWA and Service Worker header configurations
 [[headers]]

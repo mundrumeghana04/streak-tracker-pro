@@ -148,9 +148,9 @@ async function runCheckReminders() {
       minutesDiff
     });
 
-    // Allow a 120-minute window after scheduled time
+    // Allow a 180-minute window after scheduled time
     const isTimeToRemind =
-      minutesDiff >= 0 && minutesDiff <= 120;
+  minutesDiff >= 0 && minutesDiff <= 180;
 
     if (!isTimeToRemind) {
       console.log(

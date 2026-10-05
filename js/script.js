@@ -12,8 +12,7 @@ const USER_TIMEZONE = (() => {
 })();
 
 // Default fallback VAPID key (matches generated backend key)
-const FALLBACK_VAPID_PUBLIC_KEY = 'BN72HLtQfYH-gyzLSJURTEBhbfNlm6gd5mQGsGJQ171LBbj4jXY3wMT30Yn7UQl4_Jyv7IaodoulkFA3jreNBgM';
-
+const FALLBACK_VAPID_PUBLIC_KEY = 'BBiD1WwJ1WVDls6dvafwEnIpJHvNYetQ8VLbm06yWLYwnscdiWKRC9w9kkZGFTAwwvVMxVSgrM6NhhpzpDNgm-k';
 let swRegistration = null;
 let currentPushSubscription = null;
 

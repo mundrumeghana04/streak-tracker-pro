@@ -456,15 +456,94 @@ async function complete(id) {
   }
 }
 
-// ================= DELETE TASK =================
+// ================= CONFIRM DELETE MODAL SYSTEM (v1.3.1) =================
+let pendingDeleteAction = null;
+let isDeleteProcessing = false;
+
+const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+const confirmDeleteTitle = document.getElementById('confirmDeleteTitle');
+const confirmDeleteMessage = document.getElementById('confirmDeleteMessage');
+const confirmDeleteCancelBtn = document.getElementById('confirmDeleteCancelBtn');
+const confirmDeleteConfirmBtn = document.getElementById('confirmDeleteConfirmBtn');
+const confirmDeleteCloseBtn = document.getElementById('confirmDeleteCloseBtn');
+
+function openConfirmDeleteModal({ title, message, onConfirm }) {
+  if (!confirmDeleteModal) return;
+
+  if (confirmDeleteTitle) confirmDeleteTitle.textContent = title;
+  if (confirmDeleteMessage) confirmDeleteMessage.textContent = message;
+
+  if (confirmDeleteConfirmBtn) confirmDeleteConfirmBtn.disabled = false;
+  isDeleteProcessing = false;
+  pendingDeleteAction = onConfirm;
+
+  confirmDeleteModal.style.display = 'flex';
+  if (confirmDeleteCancelBtn) confirmDeleteCancelBtn.focus();
+}
+
+function closeConfirmDeleteModal() {
+  if (confirmDeleteModal) {
+    confirmDeleteModal.style.display = 'none';
+  }
+  pendingDeleteAction = null;
+  isDeleteProcessing = false;
+}
+
+if (confirmDeleteCancelBtn) {
+  confirmDeleteCancelBtn.onclick = closeConfirmDeleteModal;
+}
+if (confirmDeleteCloseBtn) {
+  confirmDeleteCloseBtn.onclick = closeConfirmDeleteModal;
+}
+if (confirmDeleteModal) {
+  confirmDeleteModal.onclick = (e) => {
+    if (e.target === confirmDeleteModal) {
+      closeConfirmDeleteModal();
+    }
+  };
+}
+if (confirmDeleteConfirmBtn) {
+  confirmDeleteConfirmBtn.onclick = async () => {
+    if (isDeleteProcessing) return; // Prevent double-click
+    isDeleteProcessing = true;
+    confirmDeleteConfirmBtn.disabled = true;
+
+    if (typeof pendingDeleteAction === 'function') {
+      const action = pendingDeleteAction;
+      pendingDeleteAction = null;
+      try {
+        await action();
+      } catch (err) {
+        console.error('Delete action failed:', err);
+      }
+    }
+    closeConfirmDeleteModal();
+  };
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && confirmDeleteModal && confirmDeleteModal.style.display === 'flex') {
+    closeConfirmDeleteModal();
+  }
+});
+
+// ================= DELETE TASK (CONFIRM REQUIRED) =================
 async function del(id) {
   const taskToDelete = tasks.find(t => t.id === id);
-  if (taskToDelete && taskToDelete.notificationEnabled) {
-    deleteReminderFromBackend(id);
-  }
+  if (!taskToDelete) return;
 
-  tasks = tasks.filter(t => t.id !== id);
-  save();
+  openConfirmDeleteModal({
+    title: "Delete this goal?",
+    message: `Are you sure you want to permanently delete ${taskToDelete.title}?`,
+    onConfirm: async () => {
+      if (taskToDelete.notificationEnabled) {
+        deleteReminderFromBackend(id);
+      }
+
+      tasks = tasks.filter(t => t.id !== id);
+      save();
+    }
+  });
 }
 
 // ================= NOTES =================
@@ -515,23 +594,63 @@ async function saveReminderSettings(id) {
   }
 }
 
+// ================= DAILY NAVIGATION FILTER (v1.3.1) =================
+let currentDailyFilter = 'all'; // 'all' | 'in-progress' | 'completed'
+
+const dailyFilterBtns = document.querySelectorAll('.daily-filter-btn');
+dailyFilterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const filter = btn.dataset.filter;
+    if (!filter || filter === currentDailyFilter) return;
+
+    currentDailyFilter = filter;
+    dailyFilterBtns.forEach(b => {
+      const isActive = b.dataset.filter === filter;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    render();
+  });
+});
+
 // ================= RENDER =================
 function render() {
   const wrap = document.getElementById('tasks');
   const emptyState = document.getElementById("emptyState");
+  const emptyStateTitle = document.getElementById("emptyStateTitle");
+  const emptyStateDesc = document.getElementById("emptyStateDesc");
 
   wrap.innerHTML = '';
 
+  const tday = today();
+
+  // Overview stats calculated across ALL goals
   let done = 0;
   let longest = 0;
+  tasks.forEach(t => {
+    if (t.lastCompleted === tday) done++;
+    longest = Math.max(longest, t.bestStreak);
+  });
 
   const keyword = (searchTask.value || "").toLowerCase();
 
-  const filtered = tasks.filter(t =>
-    t.title.toLowerCase().includes(keyword) ||
-    t.category.toLowerCase().includes(keyword) ||
-    t.priority.toLowerCase().includes(keyword)
-  );
+  const filtered = tasks.filter(t => {
+    const matchesSearch =
+      t.title.toLowerCase().includes(keyword) ||
+      t.category.toLowerCase().includes(keyword) ||
+      t.priority.toLowerCase().includes(keyword);
+
+    if (!matchesSearch) return false;
+
+    // Daily filter evaluation: based strictly on whether completed today
+    const isCompletedToday = t.lastCompleted === tday;
+    if (currentDailyFilter === 'completed') {
+      return isCompletedToday;
+    } else if (currentDailyFilter === 'in-progress') {
+      return !isCompletedToday;
+    }
+    return true; // 'all'
+  });
 
   const hasPushSupport = 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window;
   const permissionState = 'Notification' in window ? Notification.permission : 'unsupported';
@@ -665,7 +784,24 @@ function render() {
   document.getElementById("completedToday").textContent = done;
   document.getElementById("longestStreak").textContent = longest;
 
-  emptyState.style.display = filtered.length === 0 ? "block" : "none";
+  if (filtered.length === 0) {
+    emptyState.style.display = "block";
+    if (tasks.length === 0) {
+      if (emptyStateTitle) emptyStateTitle.textContent = "No Goals Yet";
+      if (emptyStateDesc) emptyStateDesc.textContent = "Add your first goal and start building your streak.";
+    } else if (keyword) {
+      if (emptyStateTitle) emptyStateTitle.textContent = "No Matching Goals";
+      if (emptyStateDesc) emptyStateDesc.textContent = "Try searching with a different keyword.";
+    } else if (currentDailyFilter === 'completed') {
+      if (emptyStateTitle) emptyStateTitle.textContent = "No Goals Completed Today";
+      if (emptyStateDesc) emptyStateDesc.textContent = "Mark a goal complete today to see it here.";
+    } else if (currentDailyFilter === 'in-progress') {
+      if (emptyStateTitle) emptyStateTitle.textContent = "All Goals Completed Today!";
+      if (emptyStateDesc) emptyStateDesc.textContent = "Great job! You have completed all your goals for today.";
+    }
+  } else {
+    emptyState.style.display = "none";
+  }
 }
 
 function escapeHtml(str) {
@@ -683,7 +819,7 @@ searchTask.addEventListener("input", render);
 // ================= IMPORT / EXPORT =================
 document.getElementById('exportBtn').onclick = () => {
   const backupData = {
-    version: '1.3',
+    version: '1.3.1',
     app: 'StreakUp',
     exportedAt: new Date().toISOString(),
     tasks,
@@ -1171,23 +1307,27 @@ async function markReminderCompleted(id) {
 
 async function deleteTaskReminder(id) {
   const rem = taskReminders.find(r => r.id === id);
-  const title = rem ? rem.title : 'this reminder';
+  if (!rem) return;
 
-  if (!confirm(`Are you sure you want to delete "${title}"?`)) {
-    return;
-  }
+  const title = rem.title || 'this reminder';
 
-  // 1. Permanently delete from Supabase task_reminders
-  deleteTaskReminderFromBackend(id);
+  openConfirmDeleteModal({
+    title: "Delete this reminder?",
+    message: `Are you sure you want to permanently delete ${title}?`,
+    onConfirm: async () => {
+      // 1. Permanently delete from Supabase task_reminders
+      deleteTaskReminderFromBackend(id);
 
-  // 2. Remove permanently from local storage
-  taskReminders = taskReminders.filter(r => r.id !== id);
-  saveTaskRemindersLocal();
+      // 2. Remove permanently from local storage
+      taskReminders = taskReminders.filter(r => r.id !== id);
+      saveTaskRemindersLocal();
 
-  // 3. Immediately re-render UI
-  renderTaskReminders();
+      // 3. Immediately re-render UI
+      renderTaskReminders();
 
-  showBanner(`🗑️ "${title}" deleted.`, 'info', 4000);
+      showBanner(`🗑️ "${title}" deleted.`, 'info', 4000);
+    }
+  });
 }
 
 // Attach event listeners for one-time task reminders
@@ -1212,6 +1352,8 @@ if (cancelReminderBtn) {
 // Make helper functions globally accessible for inline onclicks
 window.showNotificationHelp = showNotificationHelp;
 window.closeNotificationHelp = closeNotificationHelp;
+window.openConfirmDeleteModal = openConfirmDeleteModal;
+window.closeConfirmDeleteModal = closeConfirmDeleteModal;
 window.toggleEditReminder = toggleEditReminder;
 window.saveReminderSettings = saveReminderSettings;
 window.complete = complete;

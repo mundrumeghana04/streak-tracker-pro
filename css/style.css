@@ -852,6 +852,138 @@ body.dark .modal-card {
     padding: 10px 24px;
 }
 
+/* ================= CONFIRM DELETE MODAL (v1.3.1) ================= */
+.confirm-modal-card {
+    max-width: 440px;
+}
+
+.confirm-modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 22px;
+}
+
+.modal-btn-cancel {
+    background: rgba(100, 116, 139, 0.12);
+    color: #475569;
+    border: 1px solid rgba(100, 116, 139, 0.25);
+    width: auto;
+    padding: 10px 22px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+body.dark .modal-btn-cancel {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.25);
+}
+
+.modal-btn-cancel:hover {
+    background: rgba(100, 116, 139, 0.22);
+}
+
+body.dark .modal-btn-cancel:hover {
+    background: rgba(148, 163, 184, 0.25);
+}
+
+.modal-btn-danger {
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    width: auto;
+    padding: 10px 24px;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.modal-btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.modal-btn-danger:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ================= DAILY NAVIGATION FILTER (v1.3.1) ================= */
+.tasks-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tasks-header-bar h2 {
+    margin-bottom: 0;
+}
+
+.daily-filter-nav {
+    display: inline-flex;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px;
+    border-radius: 30px;
+    gap: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark .daily-filter-nav {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.daily-filter-btn {
+    border: none;
+    background: transparent;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+body.dark .daily-filter-btn {
+    color: var(--text-dark);
+}
+
+.daily-filter-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark .daily-filter-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.daily-filter-btn.active {
+    background: #4f46e5;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+}
+
+body.dark .daily-filter-btn.active {
+    background: #6366f1;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
 /* ================= ONE-TIME TASK REMINDERS SECTION ================= */
 .task-reminders-section {
     background: var(--card-light);
@@ -1351,5 +1483,31 @@ body.dark .reminder-action-btn.btn-delete:hover {
     .reminder-action-btn.btn-edit,
     .reminder-action-btn.btn-delete {
         flex: 1;
+    }
+
+    .tasks-header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .daily-filter-nav {
+        width: 100%;
+        display: flex;
+    }
+
+    .daily-filter-btn {
+        flex: 1;
+        padding: 8px 10px;
+        font-size: 0.82rem;
+    }
+
+    .confirm-modal-footer {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+
+    .confirm-modal-footer button {
+        width: 100%;
     }
 }

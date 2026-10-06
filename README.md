@@ -1,4 +1,4 @@
-# 🔥 StreakUp (v1.3)
+# 🔥 StreakUp (v1.3.1)
 
 > **Build consistency. Level up every day.**
 

@@ -1,7 +1,7 @@
 // StreakUp - Service Worker (sw.js)
-// Version 1.3.0 - Offline PWA & Background Push Support
+// Version 1.3.1 - Offline PWA & Background Push Support
 
-const CACHE_NAME = 'streakup-v1.3.0';
+const CACHE_NAME = 'streakup-v1.3.1';
 
 const STATIC_ASSETS = [
   '/',

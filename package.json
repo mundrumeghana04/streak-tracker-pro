@@ -1,10 +1,10 @@
 {
   "name": "streakup",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "StreakUp - Build consistency. Level up every day. Habit tracking and one-time reminders with real background scheduled push notifications",
   "scripts": {
     "start": "node scripts/dev-server.js",
-    "test": "node scripts/test-scheduler-logic.js && node scripts/test-one-time-reminders.js",
+    "test": "node scripts/test-scheduler-logic.js && node scripts/test-one-time-reminders.js && node scripts/test-v131-features.js",
     "generate-vapid": "node scripts/generate-vapid.js",
     "test-push": "node scripts/test-push.js",
     "check-reminders": "node scripts/check-reminders-local.js"

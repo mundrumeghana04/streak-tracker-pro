@@ -67,6 +67,23 @@
         </div>
     </div>
 
+    <!-- ================= CONFIRM DELETE MODAL (v1.3.1) ================= -->
+    <div id="confirmDeleteModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="confirmDeleteTitle">
+        <div class="modal-card confirm-modal-card">
+            <div class="modal-header">
+                <h3 id="confirmDeleteTitle">Delete this goal?</h3>
+                <button type="button" class="modal-close-btn" id="confirmDeleteCloseBtn" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmDeleteMessage">Are you sure you want to permanently delete this goal?</p>
+            </div>
+            <div class="modal-footer confirm-modal-footer">
+                <button type="button" class="modal-btn-cancel" id="confirmDeleteCancelBtn">Cancel</button>
+                <button type="button" class="modal-btn-danger" id="confirmDeleteConfirmBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= SEARCH ================= -->
     <section class="search-section">
         <input id="searchTask" placeholder="🔍 Search goals, categories..." />
@@ -157,13 +174,22 @@
     <!-- ================= TASKS ================= -->
     <section class="tasks-section">
 
-        <h2>Your Goals</h2>
+        <div class="tasks-header-bar">
+            <h2>Your Goals</h2>
+
+            <!-- Daily Navigation Filter (v1.3.1) -->
+            <div class="daily-filter-nav" role="tablist" aria-label="Daily goal status filter">
+                <button type="button" class="daily-filter-btn active" data-filter="all" role="tab" aria-selected="true">All</button>
+                <button type="button" class="daily-filter-btn" data-filter="in-progress" role="tab" aria-selected="false">In Progress</button>
+                <button type="button" class="daily-filter-btn" data-filter="completed" role="tab" aria-selected="false">Completed</button>
+            </div>
+        </div>
 
         <div id="tasks"></div>
 
         <div id="emptyState">
-            <h3>No Goals Yet</h3>
-            <p>Add your first goal and start building your streak.</p>
+            <h3 id="emptyStateTitle">No Goals Yet</h3>
+            <p id="emptyStateDesc">Add your first goal and start building your streak.</p>
         </div>
 
     </section>
